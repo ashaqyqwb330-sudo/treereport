@@ -1,3 +1,4 @@
+# @builder:file .github/workflows/build_apk.yml
 name: Build Android APK
 
 on:
@@ -36,11 +37,10 @@ jobs:
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
           yes | $BUILDROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          $BUILDROOT/cmdline-tools/latest/bin/sdkmanager --install \
+          yes | $BUILDROOT/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-31" \
             "build-tools;34.0.0" \
-            "ndk;23.2.8568313" \
-            --accept_license
+            "ndk;23.2.8568313"
 
       - name: 🔗 إعداد متغيرات Buildozer
         run: |
@@ -58,3 +58,4 @@ jobs:
         with:
           name: TreeReporter-APK
           path: bin/*.apk
+# @builder:end
