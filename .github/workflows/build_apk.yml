@@ -1,0 +1,53 @@
+
+```yaml
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 استنساخ المستودع
+        uses: actions/checkout@v4
+
+      - name: 🐍 تثبيت Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: 🔧 تثبيت Buildozer وأدواته
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool
+          pip install --upgrade Cython==0.29.33
+          pip install buildozer
+
+      - name: 📱 إعداد Android SDK و NDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 31
+          ndk-version: 23.2.8568313
+          build-tools: 30.0.3
+          accept-android-sdk-licenses: yes
+
+      - name: 🔗 إعداد متغيرات البيئة لـ Buildozer
+        run: |
+          echo "ANDROIDSDK=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROIDNDK=$ANDROID_HOME/ndk/23.2.8568313" >> $GITHUB_ENV
+          echo "ANDROIDAPI=31" >> $GITHUB_ENV
+          echo "ANDROIDMINAPI=21" >> $GITHUB_ENV
+
+      - name: 🚀 بناء الـ APK
+        run: |
+          buildozer android debug
+
+      - name: 📦 رفع الـ APK كـ Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TreeReporter-APK
+          path: bin/*.apk
+```
