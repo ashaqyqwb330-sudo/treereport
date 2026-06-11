@@ -38,12 +38,13 @@ jobs:
           export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/23.2.8568313
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
-          # قبول التراخيص
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
-          # تثبيت المكونات المطلوبة
+          # قبول جميع التراخيص
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+          # تثبيت المكونات المطلوبة (بما فيها build-tools 37.0.0)
           $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-31" \
             "build-tools;30.0.3" \
+            "build-tools;37.0.0" \
             "ndk;23.2.8568313"
 
       - name: 🔗 إعداد متغيرات Buildozer
