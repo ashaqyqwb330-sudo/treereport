@@ -17,25 +17,39 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: 🔧 تثبيت Buildozer وأدواته
+      - name: 🔧 تثبيت الأدوات الأساسية و Buildozer
         run: |
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool
           pip install --upgrade Cython==0.29.33
           pip install buildozer
 
-      - name: 📱 إعداد Android SDK و NDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 31
-          ndk-version: 23.2.8568313
-          build-tools: 30.0.3
-          accept-android-sdk-licenses: yes
-
-      - name: 🔗 إعداد متغيرات البيئة لـ Buildozer
+      - name: 📱 إعداد Android SDK و NDK يدويًا
         run: |
-          echo "ANDROIDSDK=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "ANDROIDNDK=$ANDROID_HOME/ndk/23.2.8568313" >> $GITHUB_ENV
+          # تحميل أدوات سطر الأوامر إذا لم تكن موجودة
+          if [ ! -d "$HOME/android-sdk/cmdline-tools/latest" ]; then
+            mkdir -p $HOME/android-sdk/cmdline-tools
+            wget -q https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+            unzip -q commandlinetools-linux-12266719_latest.zip -d $HOME/android-sdk/cmdline-tools
+            mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+          fi
+          # تعيين متغيرات البيئة
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/23.2.8568313
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+          # قبول التراخيص
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          # تثبيت المكونات المطلوبة
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-31" \
+            "build-tools;30.0.3" \
+            "ndk;23.2.8568313"
+
+      - name: 🔗 إعداد متغيرات Buildozer
+        run: |
+          echo "ANDROIDSDK=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROIDNDK=$ANDROID_NDK_HOME" >> $GITHUB_ENV
           echo "ANDROIDAPI=31" >> $GITHUB_ENV
           echo "ANDROIDMINAPI=21" >> $GITHUB_ENV
 
