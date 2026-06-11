@@ -1,6 +1,60 @@
+name: Build Android APK
 
-```bash
-tail -1 .github/workflows/build_apk.yml
-```
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
-يجب أن يظهر:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 استنساخ المستودع
+        uses: actions/checkout@v4
+
+      - name: 🐍 تثبيت Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: 🔧 تثبيت الأدوات الأساسية و Buildozer
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool zlib1g-dev
+          pip install --upgrade Cython==0.29.33
+          pip install buildozer
+
+      - name: 📱 إعداد Android SDK و NDK في المسار المتوقع من Buildozer
+        run: |
+          BUILDROOT=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $BUILDROOT/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          unzip -q commandlinetools-linux-12266719_latest.zip -d $BUILDROOT/cmdline-tools
+          mv $BUILDROOT/cmdline-tools/cmdline-tools $BUILDROOT/cmdline-tools/latest
+          export ANDROID_SDK_ROOT=$BUILDROOT
+          export ANDROID_NDK_HOME=$BUILDROOT/ndk/23.2.8568313
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+          yes | $BUILDROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          $BUILDROOT/cmdline-tools/latest/bin/sdkmanager --install \
+            "platforms;android-31" \
+            "build-tools;34.0.0" \
+            "ndk;23.2.8568313" \
+            --accept_license
+
+      - name: 🔗 إعداد متغيرات Buildozer
+        run: |
+          echo "ANDROIDSDK=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
+          echo "ANDROIDNDK=$HOME/.buildozer/android/platform/android-sdk/ndk/23.2.8568313" >> $GITHUB_ENV
+          echo "ANDROIDAPI=31" >> $GITHUB_ENV
+          echo "ANDROIDMINAPI=21" >> $GITHUB_ENV
+
+      - name: 🚀 بناء الـ APK
+        run: |
+          buildozer android debug
+
+      - name: 📦 رفع الـ APK كـ Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TreeReporter-APK
+          path: bin/*.apk
