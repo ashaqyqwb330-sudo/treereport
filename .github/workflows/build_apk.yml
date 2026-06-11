@@ -30,24 +30,75 @@ jobs:
           BUILDROOT=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $BUILDROOT/cmdline-tools
           
-          # Download with error checking
+          # Download with timeout and retry logic
           echo "Downloading Android Command Line Tools..."
-          wget https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          DOWNLOAD_URL="https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip"
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
           
-          # Verify the file is a valid zip
-          if ! unzip -t commandlinetools-linux-12266719_latest.zip > /dev/null 2>&1; then
-            echo "Downloaded file is corrupted. Retrying..."
-            rm -f commandlinetools-linux-12266719_latest.zip
-            wget https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+            if wget --timeout=300 --tries=3 -O commandlinetools-linux-12266719_latest.zip "$DOWNLOAD_URL"; then
+              echo "Download successful"
+              break
+            else
+              echo "Download failed on attempt $ATTEMPT"
+              rm -f commandlinetools-linux-12266719_latest.zip
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                echo "Waiting 10 seconds before retry..."
+                sleep 10
+              fi
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+          
+          # Verify the file exists
+          if [ ! -f commandlinetools-linux-12266719_latest.zip ]; then
+            echo "ERROR: Failed to download Android Command Line Tools after $MAX_ATTEMPTS attempts"
+            exit 1
           fi
           
+          # Verify file size is reasonable (should be > 600MB)
+          FILE_SIZE=$(stat -f%z commandlinetools-linux-12266719_latest.zip 2>/dev/null || stat -c%s commandlinetools-linux-12266719_latest.zip 2>/dev/null)
+          if [ "$FILE_SIZE" -lt 600000000 ]; then
+            echo "ERROR: Downloaded file is too small ($FILE_SIZE bytes). File may be corrupted."
+            exit 1
+          fi
+          
+          # Verify the file is a valid zip
+          echo "Verifying zip file integrity..."
+          if ! unzip -t commandlinetools-linux-12266719_latest.zip > /dev/null 2>&1; then
+            echo "ERROR: Downloaded file is corrupted or not a valid zip"
+            exit 1
+          fi
+          
+          echo "Extracting Android Command Line Tools..."
           unzip -q commandlinetools-linux-12266719_latest.zip -d $BUILDROOT/cmdline-tools
+          
+          # Verify extraction was successful
+          if [ ! -d "$BUILDROOT/cmdline-tools/cmdline-tools" ]; then
+            echo "ERROR: Failed to extract cmdline-tools"
+            exit 1
+          fi
+          
           mv $BUILDROOT/cmdline-tools/cmdline-tools $BUILDROOT/cmdline-tools/latest
+          
+          # Verify sdkmanager exists
+          if [ ! -f "$BUILDROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            echo "ERROR: sdkmanager not found after extraction"
+            ls -la "$BUILDROOT/cmdline-tools/latest/" || echo "Directory listing failed"
+            exit 1
+          fi
+          
           export ANDROID_SDK_ROOT=$BUILDROOT
           export ANDROID_NDK_HOME=$BUILDROOT/ndk/23.2.8568313
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+          
+          echo "Accepting SDK licenses..."
           yes | $BUILDROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          
+          echo "Installing SDK packages..."
           yes | $BUILDROOT/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-31" \
             "build-tools;34.0.0" \
