@@ -1,5 +1,3 @@
-
-```python
 # -*- coding: utf-8 -*-
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -118,4 +116,3 @@ class TreeApp(App):
 
 if __name__ == '__main__':
     TreeApp().run()
-```
