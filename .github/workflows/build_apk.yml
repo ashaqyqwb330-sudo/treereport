@@ -1,1 +1,6 @@
-   ... (انسخ كامل محتوى سير العمل أعلاه) ...
+
+```bash
+tail -1 .github/workflows/build_apk.yml
+```
+
+يجب أن يظهر:
