@@ -15,6 +15,7 @@ android.api = 31
 android.minapi = 21
 android.ndk = 23b
 android.sdk = 31
+android.build_tools_version = 34.0.0
 android.gradle_dependencies = 
 android.arch = armeabi-v7a, arm64-v8a
 ios.kivy_ios_url = https://github.com/kivy/kivy-ios
