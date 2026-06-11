@@ -29,7 +29,18 @@ jobs:
         run: |
           BUILDROOT=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $BUILDROOT/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          
+          # Download with error checking
+          echo "Downloading Android Command Line Tools..."
+          wget https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          
+          # Verify the file is a valid zip
+          if ! unzip -t commandlinetools-linux-12266719_latest.zip > /dev/null 2>&1; then
+            echo "Downloaded file is corrupted. Retrying..."
+            rm -f commandlinetools-linux-12266719_latest.zip
+            wget https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          fi
+          
           unzip -q commandlinetools-linux-12266719_latest.zip -d $BUILDROOT/cmdline-tools
           mv $BUILDROOT/cmdline-tools/cmdline-tools $BUILDROOT/cmdline-tools/latest
           export ANDROID_SDK_ROOT=$BUILDROOT
